@@ -172,16 +172,7 @@ uint8_t Adafruit_PCD8544::getPixel(int8_t x, int8_t y) {
 
 
 void Adafruit_PCD8544::begin(uint8_t contrast, uint8_t bias) {
-  if (isHardwareSPI()) {
-    // Setup hardware SPI.
-    SPI.begin();
-    SPI.setClockDivider(PCD8544_SPI_CLOCK_DIV);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setBitOrder(MSBFIRST);
-  }
-  else {
-    // Setup software SPI.
-
+  if (!isHardwareSPI()) {
     // Set software SPI specific pin outputs.
     pinMode(_din, OUTPUT);
     pinMode(_sclk, OUTPUT);
@@ -259,22 +250,36 @@ bool Adafruit_PCD8544::isHardwareSPI() {
   return (_din == -1 && _sclk == -1);
 }
 
+void Adafruit_PCD8544::spiBegin() {
+  if (isHardwareSPI()) {
+    SPI.beginTransaction(SPISettings(PCD8544_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
+  }
+  if (_cs > 0) {
+    digitalWrite(_cs, LOW);
+  }
+}
+
+void Adafruit_PCD8544::spiEnd() {
+  if (_cs > 0) {
+    digitalWrite(_cs, HIGH);
+  }
+  if (isHardwareSPI()) {
+    SPI.endTransaction();
+  }
+}
+
 void Adafruit_PCD8544::command(uint8_t c) {
   digitalWrite(_dc, LOW);
-  if (_cs > 0)
-    digitalWrite(_cs, LOW);
+  spiBegin();
   spiWrite(c);
-  if (_cs > 0)
-    digitalWrite(_cs, HIGH);
+  spiEnd();
 }
 
 void Adafruit_PCD8544::data(uint8_t c) {
   digitalWrite(_dc, HIGH);
-  if (_cs > 0)
-    digitalWrite(_cs, LOW);
+  spiBegin();
   spiWrite(c);
-  if (_cs > 0)
-    digitalWrite(_cs, HIGH);
+  spiEnd();
 }
 
 void Adafruit_PCD8544::setContrast(uint8_t val) {
@@ -284,10 +289,7 @@ void Adafruit_PCD8544::setContrast(uint8_t val) {
   command(PCD8544_FUNCTIONSET | PCD8544_EXTENDEDINSTRUCTION );
   command( PCD8544_SETVOP | val); 
   command(PCD8544_FUNCTIONSET);
-  
- }
-
-
+}
 
 void Adafruit_PCD8544::display(void) {
   uint8_t col, maxcol, p;
@@ -318,14 +320,11 @@ void Adafruit_PCD8544::display(void) {
     command(PCD8544_SETXADDR | col);
 
     digitalWrite(_dc, HIGH);
-    if (_cs > 0)
-      digitalWrite(_cs, LOW);
+    spiBegin();
     for(; col <= maxcol; col++) {
       spiWrite(pcd8544_buffer[(LCDWIDTH*p)+col]);
     }
-    if (_cs > 0)
-      digitalWrite(_cs, HIGH);
-
+    spiEnd();
   }
 
   command(PCD8544_SETYADDR );  // no idea why this is necessary but it is to finish the last byte?

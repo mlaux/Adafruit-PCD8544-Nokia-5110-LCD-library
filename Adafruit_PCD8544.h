@@ -67,7 +67,7 @@ All text above, and the splash screen must be included in any redistribution
 
 // Default to max SPI clock speed for PCD8544 of 4 mhz (16mhz / 4) for normal Arduinos.
 // This can be modified to change the clock speed if necessary (like for supporting other hardware).
-#define PCD8544_SPI_CLOCK_DIV SPI_CLOCK_DIV4
+#define PCD8544_SPI_FREQUENCY 4000000
 
 class Adafruit_PCD8544 : public Adafruit_GFX {
  public:
@@ -96,6 +96,8 @@ class Adafruit_PCD8544 : public Adafruit_GFX {
   volatile PortReg  *mosiport, *clkport;
   PortMask mosipinmask, clkpinmask;
 
+  void spiBegin();
+  void spiEnd();
   void spiWrite(uint8_t c);
   bool isHardwareSPI();
 };
